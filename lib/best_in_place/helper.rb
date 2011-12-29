@@ -1,7 +1,12 @@
 module BestInPlace
   module BestInPlaceHelpers
 
-    def best_in_place(object, field, opts = {})
+    def best_in_place(objects, field, opts = {})
+      objects = arrayize(objects)
+      object = objects.last
+      
+      opts[:path] ||= make_path(objects)
+      
       if opts[:display_as] && opts[:display_with]
         raise ArgumentError, "Can't use both 'display_as' and 'display_with' options at the same time"
       end
@@ -52,16 +57,18 @@ module BestInPlace
       raw out
     end
 
-    def best_in_place_if(condition, object, field, opts={})
+    def best_in_place_if(condition, objects, field, opts={})
       if condition
-        best_in_place(object, field, opts)
+        best_in_place(objects, field, opts)
       else
-        build_value_for object, field, opts
+        build_value_for objects, field, opts
       end
     end
 
   private
-    def build_value_for(object, field, opts)
+    def build_value_for(objects, field, opts)
+      object = arrayize(objects).last
+      
       if opts[:display_as]
         BestInPlace::DisplayMethods.add_model_method(object.class.to_s, field, opts[:display_as])
         object.send(opts[:display_as]).to_s
@@ -77,6 +84,12 @@ module BestInPlace
       else
         object.send(field).to_s.presence || ""
       end
+    end
+    def arrayize(potential_array)
+      potential_array.kind_of?(Array) ? potential_array : [potential_array]
+    end
+    def make_path(objects)
+      send("#{objects.collect {|m| m.class.name.downcase}.join("_")}_path", *objects)
     end
   end
 end
